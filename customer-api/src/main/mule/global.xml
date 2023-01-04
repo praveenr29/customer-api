@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	 xmlns:bti="http://www.mulesoft.org/schema/mule/ee/bti" xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:azure-cosmos-db-connector-mule-4="http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4 http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4/current/mule-azure-cosmos-db-connector-mule-4.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd
+http://www.mulesoft.org/schema/mule/ee/bti http://www.mulesoft.org/schema/mule/ee/bti/current/mule-bti-ee.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+	
+	<http:listener-config name="http_listener_config" doc:name="http-listener-config" doc:id="b1499cdb-42dc-4bff-afd2-143993c1cff7" >
+		<http:listener-connection host="localhost" port="8081" />
+	</http:listener-config>
+	<salesforce:sfdc-config name="salesforce_config" doc:name="Salesforce Config" doc:id="fe096e3e-7e10-4a82-86f6-930cc09edb29" >
+		<salesforce:basic-connection username="${secure::sf.username}" password="${secure::sf.password}" securityToken="${secure::sf.securitytoken}" />
+	</salesforce:sfdc-config>
+	<azure-cosmos-db-connector-mule-4:key-token-config name="cosmos_db_connector_config">
+        <azure-cosmos-db-connector-mule-4:key-token-auth-connection key="${cosmos.primarykey}"
+                                                                       version="${cosmos.version}"
+                                                                       baseUri="${cosmos.baseUri}"/>
+    </azure-cosmos-db-connector-mule-4:key-token-config>
+    <apikit:config name="customer-api-config" api="customer-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+	<global-property doc:name="global-property" doc:id="e7a85beb-3caf-41a0-94c8-3b73175a80b3" name="mule.env" value="dev" />
+	<configuration-properties doc:name="configuration-properties" doc:id="62c8a291-861f-4ab0-9105-cf0802b4b9ad" file="env/${mule.env}/cutomer-api.properties" />
+	<!-- <bti:transaction-manager doc:name="Bitronix Transaction Manager" doc:id="d5af0bf2-734b-4b8e-a04e-e3e2dc03e06e" /> -->
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="6d2cc36d-a612-4b29-829d-dd2f1b46e9ec" file="env/${mule.env}/secure.properties" key="${mule.securekey}">
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<global-property doc:name="Global Property" doc:id="33fe073e-f4d9-49dd-97ae-856817137dd3" name="mule.securekey" value="123456" />
+	<!-- <api-gateway:autodiscovery apiId="1704563" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="0ecffc28-9f2c-4ce7-bca4-979759c823fd" flowRef="customer-api-main" /> -->
+
+	
+	
+	</mule>
+
+	

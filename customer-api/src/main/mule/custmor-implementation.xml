@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:azure-cosmos-db-connector-mule-4="http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4 http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4/current/mule-azure-cosmos-db-connector-mule-4.xsd">
+	
+	<sub-flow name="post-customer" doc:id="ca6ea036-441b-4788-834a-e9fa007448bb" >
+		<logger level="INFO" doc:name="flow-start" doc:id="a88b69c3-ac0e-499d-923a-9d510a9a712c" message="flow start ********* input: #[payload]"/>
+		<ee:transform doc:name="create-objects" doc:id="4dd3f042-b583-49d5-b595-872ad683c619" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="salesforceData" ><![CDATA[%dw 2.0
+output application/json
+---
+[{
+  customerId__c: payload.customerId,
+  firstName__c: payload.personalInformation.firstName,
+  lastName__c: payload.personalInformation.lastName,
+  companyName__c:payload.personalInformation.companyName ,
+  email__c: payload.personalInformation.email,
+  phone__c:payload.personalInformation.phone
+}]]]></ee:set-variable>
+				<ee:set-variable variableName="dbData" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<try doc:name="Try" doc:id="3b9ed3e6-c829-48a9-9745-9793ff7a6dbd" transactionalAction="ALWAYS_BEGIN">
+			<salesforce:create doc:name="create-record" doc:id="223096e1-67f1-4c0d-af62-e701355d5e3c" config-ref="salesforce_config" type="Customer__c">
+			<salesforce:records><![CDATA[#[vars.salesforceData]]]></salesforce:records>
+		</salesforce:create>
+			<set-variable value="#[payload.successful]" doc:name="setVariable" doc:id="cd99eb6e-8f7a-44bc-96a2-e1c9c6822705" variableName="sfcreate"/>
+			<azure-cosmos-db-connector-mule-4:create-document config-ref="cosmos_db_connector_config" dbIdUriParam="${cosmos.database}" collIdUriParam="${cosmos.collection}" xMsIndexingDirectiveHeader="INCLUDE" doc:name="create-document">
+            <azure-cosmos-db-connector-mule-4:create-document-body><![CDATA[#[%dw 2.0
+output application/json
+---
+vars.dbData]]]></azure-cosmos-db-connector-mule-4:create-document-body>
+        </azure-cosmos-db-connector-mule-4:create-document>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="on-error-propagate" doc:id="243a66d6-96ae-46c3-985c-5e0b8beb3d15" type="ANY">
+					<logger level="INFO" doc:name="error-message" doc:id="0d562171-87ee-43e6-9fb5-766a9f5ff497" message="#[%dw 2.0&#10;output application/json&#10;---&#10;&quot;errors&quot;:[{&#10;&quot;error_Type&quot;: (error.errorType.namespace default &quot;&quot;) ++ ':' ++ (error.errorType.identifier default &quot;&quot;),&#10;&quot;error_description&quot;: error.cause.message default &quot;&quot;&#10;}]]"/>
+					<choice doc:name="Choice" doc:id="45336ed4-4c27-43ec-9964-f0a855c233fd" >
+						<when expression="#[vars.sfcreate == true]">
+							<flow-ref doc:name="get-saleforce-recordids" doc:id="0aca6892-fae8-41c8-8b78-26cc2ada3d0c" name="get-saleforce-recordids" />
+							<salesforce:delete doc:name="Delete" doc:id="13aae0e2-2345-436c-889f-32c7cc8dc3ea" config-ref="salesforce_config">
+								<salesforce:ids><![CDATA[#[payload.Id]]]></salesforce:ids>
+							</salesforce:delete>
+						</when>
+						<otherwise >
+							<logger level="INFO" doc:name="Logger" doc:id="2a7ccd2d-b3dc-465e-81cb-79dc0ec66487" message="#[error.exception.detailMessage default []]"/>
+						</otherwise>
+					</choice>
+				
+</on-error-propagate>
+			</error-handler>
+		</try>
+		<logger level="INFO" doc:name="flow-end" doc:id="d25d7ce2-1537-4e53-8793-2ec99f40f457" message="flow-end"/>
+	</sub-flow>
+	<sub-flow name="update-customer" doc:id="47807952-9092-40bc-8681-d301f373d331" >
+		<logger level="INFO" doc:name="flow-start" doc:id="90bac57e-bb54-4786-8b12-f35796711265" message="flow start ********* input: #[payload]"/>
+		
+		<ee:transform doc:name="update-objects" doc:id="b467d147-93de-42c5-8204-d533ca81e788" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="salesforceData" ><![CDATA[%dw 2.0
+output application/json
+---
+[{
+  customerId__c: payload.customerId,
+  firstName__c: payload.personalInformation.firstName,
+  lastName__c: payload.personalInformation.lastName,
+  companyName__c:payload.personalInformation.companyName ,
+  email__c: payload.personalInformation.email,
+  phone__c:payload.personalInformation.phone
+}]]]></ee:set-variable>
+				<ee:set-variable variableName="dbData" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<try doc:name="Try" doc:id="2a445b4d-946c-4755-bca2-41d53fd3453d" >
+			<salesforce:update doc:name="update-record" doc:id="65841f0d-2963-4d70-add4-95d697a8d860" config-ref="salesforce_config" type="Customer__c">
+				<salesforce:records><![CDATA[#[vars.salesforceData]]]></salesforce:records>
+			</salesforce:update>
+			<set-variable value="#[payload.successful]" doc:name="setVariable" doc:id="ae49c496-9e7b-4d36-a842-364fafd2f593" variableName="sfupdate"/>
+			<azure-cosmos-db-connector-mule-4:replace-document config-ref="cosmos_db_connector_config" dbIdUriParam="${cosmos.database}" collIdUriParam="${cosmos.collection}" docIdUriParam="#[vars.dbData.customerId]" xMsIndexingDirectiveHeader="INCLUDE" doc:name="update-document">
+            <azure-cosmos-db-connector-mule-4:replace-document-body><![CDATA[#[%dw 2.0
+output application/json
+---
+vars.dbData]]]></azure-cosmos-db-connector-mule-4:replace-document-body>
+        </azure-cosmos-db-connector-mule-4:replace-document>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="on-error-propagate" doc:id="498f467c-73df-4b54-a852-0c707c7ce221" type="ANY">
+					<logger level="INFO" doc:name="error-message" doc:id="06f29841-845d-489c-8f46-45c9460ff7cf" message="#[%dw 2.0&#10;output application/json&#10;---&#10;&quot;errors&quot;:[{&#10;&quot;error_Type&quot;: (error.errorType.namespace default &quot;&quot;) ++ ':' ++ (error.errorType.identifier default &quot;&quot;),&#10;&quot;error_description&quot;: error.cause.message default &quot;&quot;&#10;}]]"/>
+					<choice doc:name="Choice" doc:id="6bd7f34b-5c07-4e52-a396-312fb7e2f79c" >
+						<when expression="#[vars.sfupdate == true]">
+						<flow-ref doc:name="get-saleforce-recordids" doc:id="e4a1ea0a-bedc-405a-989d-c49552be40a6" name="get-saleforce-recordids" />
+							<salesforce:update doc:name="update-record" doc:id="f9965018-9eca-4071-9cbe-d445546853b2" config-ref="salesforce_config" type="Customer__c">
+				<salesforce:records><![CDATA[#[vars.getCustomerDetails]]]></salesforce:records>
+			</salesforce:update>
+						
+</when>
+						<otherwise >
+							<logger level="INFO" doc:name="Logger" doc:id="b9825ad9-144c-4daa-bf2c-70b0e9191c33" message="#[error.exception.detailMessage default []]"/>
+						</otherwise>
+					</choice>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<logger level="INFO" doc:name="flow-end" doc:id="b2d22cba-6088-4022-a57d-e0544d3e8469" message="flow-end"/>
+	</sub-flow>
+	<sub-flow name="get-customer" doc:id="f94c8f26-01d9-4689-961d-9b9cd1e66992" >
+		<logger level="INFO" doc:name="flow-start" doc:id="3f1390f9-9876-4744-b1ad-4d566bedc8f7" message="flow start ********* input: #[payload]"/>
+		<set-variable value="#[attributes.uriParams.CustomerID]" doc:name="Set Variable" doc:id="b235f01a-942c-4723-9101-e02072782f4d" variableName="custid"/>
+		<try doc:name="Try" doc:id="cae6e9ad-c311-4f44-b94c-10e7d9bf615e" >
+			<salesforce:query doc:name="query-records" doc:id="6e614652-1651-439b-996c-47777b82f494" config-ref="salesforce_config">
+				<salesforce:salesforce-query ><![CDATA[select Id,customerId__c,firstName__c,lastName__c,companyName__c,email__c,phone__c from Customer__c where customerId__c = ':custid']]></salesforce:salesforce-query>
+				<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	custid : vars.custid
+}]]]></salesforce:parameters>
+			</salesforce:query>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a1c4bb28-5c07-412f-8cd1-9ab563cb6578" type="ANY">
+					<logger level="INFO" doc:name="error-message" doc:id="66b81867-c171-4b26-9069-b40a011b7673" message="#[error.errorMessage.payload.errors default []]"/>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Transform Message" doc:id="bf8d6a6f-e091-46d0-832b-d4a61cd67f9d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map 
+{"customerId": $.customerId__c, 
+  "personalInformation": {
+    "firstName": $.firstName__c,
+    "lastName":$.lastName__c,
+    "companyName": $.companyName__c,
+    "email": $.email__c,
+    "phone": $.phone__c
+  },
+  "address": [
+    {
+      "street": "",
+      "houseNumber": 114,
+      "city": "",
+      "country": "",
+      "postalCode": 90408
+    }
+  ]}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="flow-end" doc:id="426a3759-8259-4e65-a964-3512f820a95a" message="flow-end"/>
+	</sub-flow>
+	<sub-flow name="get-saleforce-recordids" doc:id="77959569-9ebc-4673-9c73-3c58aec36806" >
+		<salesforce:query doc:name="Query" doc:id="ecace302-cab9-4f50-87a7-e937fbf1b3ed" config-ref="salesforce_config">
+				<salesforce:salesforce-query><![CDATA[select Id,customerId__c,firstName__c,lastName__c,companyName__c,email__c,phone__c from Customer__c where customerId__c = ':custid']]></salesforce:salesforce-query>
+				<salesforce:parameters><![CDATA[#[output application/java
+---
+{
+	custid : vars.salesforceData.customerId__c[0]
+}]]]></salesforce:parameters>
+			</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="6ff5d7f3-d862-41e7-8809-57534bcfee7e">
+				<ee:message>
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map {
+	Id: $.Id
+}]]></ee:set-payload>
+				</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="getCustomerDetails" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+			</ee:transform>
+		
+	</sub-flow>
+</mule>
