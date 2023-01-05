@@ -63,15 +63,15 @@ vars.dbData]]]></azure-cosmos-db-connector-mule-4:create-document-body>
 	</sub-flow>
 	<sub-flow name="update-customer" doc:id="47807952-9092-40bc-8681-d301f373d331" >
 		<logger level="INFO" doc:name="flow-start" doc:id="90bac57e-bb54-4786-8b12-f35796711265" message="flow start ********* input: #[payload]"/>
-		
-		<ee:transform doc:name="update-objects" doc:id="b467d147-93de-42c5-8204-d533ca81e788" >
-			<ee:message >
+		<ee:transform doc:name="update-objects" doc:id="b467d147-93de-42c5-8204-d533ca81e788">
+			<ee:message>
 			</ee:message>
-			<ee:variables >
-				<ee:set-variable variableName="salesforceData" ><![CDATA[%dw 2.0
+			<ee:variables>
+				<ee:set-variable variableName="salesforceData"><![CDATA[%dw 2.0
 output application/json
 ---
-[{
+[{ 
+  
   customerId__c: payload.customerId,
   firstName__c: payload.personalInformation.firstName,
   lastName__c: payload.personalInformation.lastName,
@@ -79,15 +79,19 @@ output application/json
   email__c: payload.personalInformation.email,
   phone__c:payload.personalInformation.phone
 }]]]></ee:set-variable>
-				<ee:set-variable variableName="dbData" ><![CDATA[%dw 2.0
+				<ee:set-variable variableName="dbData"><![CDATA[%dw 2.0
 output application/json
 ---
 payload]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+		<flow-ref doc:name="get-saleforce-recordids" doc:id="e4a1ea0a-bedc-405a-989d-c49552be40a6" name="get-saleforce-recordids" />
 		<try doc:name="Try" doc:id="2a445b4d-946c-4755-bca2-41d53fd3453d" >
+			<logger level="INFO" doc:name="Logger" doc:id="78043c56-7cf7-40e8-aa31-39bccb9b529b" message="#[vars.salesforceData map(value,key)-&gt;{&#10;	(value),Id: vars.getCustomerDetails.Id[0]&#10;}]"/>
 			<salesforce:update doc:name="update-record" doc:id="65841f0d-2963-4d70-add4-95d697a8d860" config-ref="salesforce_config" type="Customer__c">
-				<salesforce:records><![CDATA[#[vars.salesforceData]]]></salesforce:records>
+				<salesforce:records><![CDATA[#[vars.salesforceData map(value,key)->{
+	(value),Id: vars.getCustomerDetails.Id[0]
+}]]]></salesforce:records>
 			</salesforce:update>
 			<set-variable value="#[payload.successful]" doc:name="setVariable" doc:id="ae49c496-9e7b-4d36-a842-364fafd2f593" variableName="sfupdate"/>
 			<azure-cosmos-db-connector-mule-4:replace-document config-ref="cosmos_db_connector_config" dbIdUriParam="${cosmos.database}" collIdUriParam="${cosmos.collection}" docIdUriParam="#[vars.dbData.customerId]" xMsIndexingDirectiveHeader="INCLUDE" doc:name="update-document">
@@ -101,7 +105,6 @@ vars.dbData]]]></azure-cosmos-db-connector-mule-4:replace-document-body>
 					<logger level="INFO" doc:name="error-message" doc:id="06f29841-845d-489c-8f46-45c9460ff7cf" message="#[%dw 2.0&#10;output application/json&#10;---&#10;&quot;errors&quot;:[{&#10;&quot;error_Type&quot;: (error.errorType.namespace default &quot;&quot;) ++ ':' ++ (error.errorType.identifier default &quot;&quot;),&#10;&quot;error_description&quot;: error.cause.message default &quot;&quot;&#10;}]]"/>
 					<choice doc:name="Choice" doc:id="6bd7f34b-5c07-4e52-a396-312fb7e2f79c" >
 						<when expression="#[vars.sfupdate == true]">
-						<flow-ref doc:name="get-saleforce-recordids" doc:id="e4a1ea0a-bedc-405a-989d-c49552be40a6" name="get-saleforce-recordids" />
 							<salesforce:update doc:name="update-record" doc:id="f9965018-9eca-4071-9cbe-d445546853b2" config-ref="salesforce_config" type="Customer__c">
 				<salesforce:records><![CDATA[#[vars.getCustomerDetails]]]></salesforce:records>
 			</salesforce:update>
@@ -150,10 +153,10 @@ payload map
   },
   "address": [
     {
-      "street": "",
+      "street": "****",
       "houseNumber": 114,
-      "city": "",
-      "country": "",
+      "city": "***",
+      "country": "***",
       "postalCode": 90408
     }
   ]}]]></ee:set-payload>

@@ -139,9 +139,39 @@ output application/json
     </flow>
     <flow name="put:\customer:application\json:customer-api-config">
         <flow-ref doc:name="update-customer" doc:id="7c00f10b-fa27-42bb-a0b9-6083a0444144" name="update-customer"/>
+    <error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="on-error-propagate" doc:id="78835a88-a891-4612-9e7a-cb4bb5f62bb1" >
+				<ee:transform doc:name="transform-message" doc:id="17a981a5-eab6-4da6-a46b-c495602066f3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+"errors":[{
+"error_Type": (error.errorType.namespace default "") ++ ':' ++ (error.errorType.identifier default ""),
+"error_description": error.cause.message default ""
+}]]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
     </flow>
     <flow name="get:\customer\(CustomerID):customer-api-config">
         <flow-ref doc:name="get-customer" doc:id="ae9e7c3f-b342-48b0-921a-24b2e4066e89" name="get-customer"/>
+    <error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="on-error-propagate" doc:id="2f176a70-a620-4feb-b645-70ae3640fbdb" >
+				<ee:transform doc:name="transform-message" doc:id="63637018-4d3f-437e-971d-ae2303aeb184" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+"errors":[{
+"error_Type": (error.errorType.namespace default "") ++ ':' ++ (error.errorType.identifier default ""),
+"error_description": error.cause.message default ""
+}]]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
     </flow>
     
 </mule>
